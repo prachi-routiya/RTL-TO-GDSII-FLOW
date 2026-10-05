@@ -1,0 +1,30 @@
+name: Yosys RTL Synthesis Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  synthesis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Yosys
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yosys
+
+      - name: Run Synthesis
+        run: |
+          yosys -p "read_verilog counter.v; synth_top -top counter; write_verilog netlist.v"
+
+      - name: Upload Synthesized Netlist
+        uses: actions/upload-artifact@v3
+        with:
+          name: synthesized-netlist
+          path: netlist.v
