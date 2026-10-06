@@ -21,7 +21,7 @@ jobs:
 
       - name: Run Synthesis
         run: |
-          yosys -p "read_verilog counter.v; synth_top -top counter; write_verilog netlist.v"
+          yosys -p "read_verilog counter.v; synth -top counter; write_verilog netlist.v"
 
       - name: Upload Synthesized Netlist
         uses: actions/upload-artifact@v4
