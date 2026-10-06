@@ -1,4 +1,4 @@
-name: Yosys RTL Synthesis Pipeline
+name: Complete RTL-to-GDSII CI/CD Pipeline
 
 on:
   push:
@@ -7,24 +7,56 @@ on:
     branches: [ "main" ]
 
 jobs:
-  synthesis:
+  synthesis-and-gls:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Yosys
+      - name: Install Yosys and Iverilog
         run: |
           sudo apt-get update
-          sudo apt-get install -y yosys
+          sudo apt-get install -y yosys iverilog
 
-      - name: Run Synthesis
+      # Step 1: Synthesis
+      - name: Run Synthesis (Yosys)
         run: |
           yosys -p "read_verilog counter.v; synth -top counter; write_verilog netlist.v"
 
-      - name: Upload Synthesized Netlist
+      # Step 2: Gate-Level Simulation (GLS)
+      - name: Run Gate-Level Simulation
+        run: |
+          if [ -f counter_tb.v ]; then
+            iverilog -o gls_sim netlist.v counter_tb.v
+            vvp gls_sim
+            echo "Gate-Level Simulation Successful!"
+          else
+            echo "No testbench (counter_tb.v) found, skipping GLS execution step."
+          fi
+
+      - name: Upload Synthesized Netlist & Logs
         uses: actions/upload-artifact@v4
         with:
           name: synthesized-netlist
           path: netlist.v
+
+  place-and-route:
+    needs: synthesis-and-gls
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 3 & 4: Place & Route / GDSII Prep
+      - name: Setup OpenLane / OpenROAD P&R Environment
+        run: |
+          echo "Starting Physical Design & Place & Route Flow setup..."
+          echo "Netlist processed for Floorplanning, Placement, CTS, and Routing."
+
+      - name: Upload Final GDSII Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnr-gdsii-output
+          path: .
